@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
+    "log"
+    "os"
+    "path"
+    "path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -17,11 +20,12 @@ import (
 
 // WriteConfig holds settings to use to write the state file.
 type WriteConfig struct {
-	Workspace  string
-	SelectTags []string
-	Filename   string
-	FileFormat Format
-	WithID     bool
+	Workspace      string
+	SelectTags     []string
+	Filename       string
+	FileFormat     Format
+	WithID         bool
+	SplitByService bool
 }
 
 func compareID(obj1, obj2 id) bool {
@@ -353,10 +357,50 @@ func KongStateToFile(kongState *state.KongState, config WriteConfig) error {
 		return compareID(file.Consumers[i], file.Consumers[j])
 	})
 
+	if config.SplitByService {
+		for _, s := range file.Services {
+			var f Content
+			f.Services = append(f.Services, s)
+			if err := writeFile(f, fmt.Sprintf("%s/%s", config.Filename, buildPathName(*s.Name)), config.FileFormat); err != nil {
+				fmt.Println("writeFile ", err)
+			}
+		}
+		file.Services = nil
+		config.Filename = fmt.Sprintf("%s/kong", config.Filename)
+	}
 	return writeFile(file, config.Filename, config.FileFormat)
 }
 
-func writeFile(content Content, filename string, format Format) error {
+func buildPathName(service string) string {
+	var envs = []string{"testing", "release"}
+	for _, env := range envs {
+        if strings.Contains(service, env) {
+            var split = strings.Split(service, env)
+            if len(split) == 1 {
+                return fmt.Sprintf("%s/%s", env,service)
+            } else {
+                return fmt.Sprintf("%s%s/%s", env,split[1], service)
+            }
+        }
+	}
+	return service
+
+
+}
+
+func makePath(file string) {
+    if _, err := os.Stat(path.Dir(file)); err == nil {
+    } else {
+        err  = os.MkdirAll(path.Dir(file),0700)
+        if err != nil {
+            log.Println("Error creating directory")
+            log.Println(err)
+            return
+        }
+    }
+}
+
+func writeFile(content interface{}, filename string, format Format) error {
 	var c []byte
 	var err error
 	switch format {
@@ -378,6 +422,7 @@ func writeFile(content Content, filename string, format Format) error {
 		_, err = fmt.Print(string(c))
 	} else {
 		filename = addExtToFilename(filename, string(format))
+        makePath(filename)
 		err = ioutil.WriteFile(filename, c, 0600)
 	}
 	if err != nil {

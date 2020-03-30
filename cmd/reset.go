@@ -112,7 +112,7 @@ func confirm() (bool, error) {
 }
 
 func init() {
-	rootCmd.AddCommand(resetCmd)
+	//rootCmd.AddCommand(resetCmd)
 	resetCmd.Flags().BoolVarP(&resetCmdForce, "force", "f",
 		false, "Skip interactive confirmation prompt before reset")
 	resetCmd.Flags().BoolVar(&dumpConfig.SkipConsumers, "skip-consumers",

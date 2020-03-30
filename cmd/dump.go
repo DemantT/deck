@@ -19,6 +19,7 @@ var (
 	dumpWorkspace        string
 	dumpAllWorkspaces    bool
 	dumpWithID           bool
+	dumpSplitByService   bool
 )
 
 func listWorkspaces(client *kong.Client, baseURL string) ([]string, error) {
@@ -131,6 +132,7 @@ configure Kong.`,
 			Filename:   dumpCmdKongStateFile,
 			FileFormat: format,
 			WithID:     dumpWithID,
+            SplitByService: dumpSplitByService,
 		}); err != nil {
 			return err
 		}
@@ -152,8 +154,10 @@ func init() {
 			"(Kong Enterprise only).")
 	dumpCmd.Flags().BoolVar(&dumpAllWorkspaces, "all-workspaces",
 		false, "dump configuration of all workspaces (Kong Enterprise only).")
+    dumpCmd.Flags().BoolVar(&dumpSplitByService, "split-by-service",
+        false, "dump configuration split by service")
 	dumpCmd.Flags().BoolVar(&dumpConfig.SkipConsumers, "skip-consumers",
-		false, "skip exporting consumers and any plugins associated "+
+		true, "skip exporting consumers and any plugins associated "+
 			"with consumers")
 	dumpCmd.Flags().StringSliceVar(&dumpConfig.SelectorTags,
 		"select-tag", []string{},
